@@ -17,8 +17,8 @@ fprintf(fName,'\\begin{table}\n');
 fprintf(fName,'\\centering\n');
 fprintf(fName,'\\begin{tabular}{| l | c | c | c | c | c |}\n');
 fprintf(fName,'\\hline\n');
-fprintf(fName,'\\multirow{2}{*}{Alg.} & \\multicolumn{2}{c|}{Time, s} & \\multicolumn{2}{c|}{No. iter.} \\\\\n');
-fprintf(fName,'& IP & ADMM \\\\\n');
+fprintf(fName,'\\multirow{2}{*}{Algorithm} & \\multicolumn{2}{c|}{Time, s} & \\multicolumn{2}{c|}{No. iter.} \\\\\n');
+fprintf(fName,'& \\texttt{cvx} & ADMM & ADMM & CG \\\\\n');
 fprintf(fName,'\\hline\n\\hline\n');
 
 
