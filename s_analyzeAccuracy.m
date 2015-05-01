@@ -93,4 +93,7 @@ fprintf('Spectrally smooth + box (ADMM):               %f sec\n',tBoxADMM);
 fprintf('Spectrally and spatially smooth (ADMM):       %f sec\n',tSpatialADMM);
 fprintf('Spectrally and spatially smooth + Box (ADMM): %f sec\n',tBoxSpatialADMM);
 
+if ~exist('./Results','dir');
+    mkdir('./Results');
+end
 save('./Results/sampleResults.mat','XBoxAdmm','histBox','XSpatialAdmm','histSpatial','XBoxSpatialAdmm','histBoxSpatial','Xls');

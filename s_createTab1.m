@@ -8,6 +8,9 @@ else
     load('./Results/macbethResults.mat');
 end
 
+if ~exist('./Figures','dir');
+    mkdir('./Figures');
+end
 
 fName = fopen('./Figures/time.tex','w');
 fprintf(fName,'\\begin{table}\n');

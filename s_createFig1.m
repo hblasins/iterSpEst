@@ -8,6 +8,9 @@ else
     load('./Results/sampleResults.mat');
 end
 
+if ~exist('./Figures','dir');
+    mkdir('./Figures');
+end
 
 % Crop images
 Xls = Xls(200:end,1:end-240,:);

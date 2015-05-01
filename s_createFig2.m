@@ -8,6 +8,10 @@ else
     load('./Results/sampleResults.mat');
 end
 
+if ~exist('./Figures','dir');
+    mkdir('./Figures');
+end
+
 % Macbeth patch ID's that are analyzed
 patchIDs = [3, 4, 7];
 load('./Data/reflBasis.mat');
