@@ -30,21 +30,20 @@ gamma = 0;
 
 Xcvx = spectralEstCVX(measImg, cameraMat, basisFcns, alpha, beta, gamma);
 
-refl = basisFcns*Xcvx;
-
 % Reflectance estimates
+reflCvx = basisFcns*reshape(Xcvx,h*w,nBasis)';
 figure;
 hold on; grid on; box on;
-plot(refl);
+plot(reflCvx);
 xlabel('Wavelength, au');
-title('Reflecctance estimates');
+title('Reflectance estimates cvx');
 
 % Spatial arrangement of basis weights
 figure;
 for i=1:nBasis
 
     subplot(2,3,i);
-    imagesc(reshape(Xcvx(i,:,:),h,w),[min(Xcvx(:)) max(Xcvx(:))]); axis image;
+    imagesc(Xcvx(:,:,i),[min(Xcvx(:)) max(Xcvx(:))]); axis image;
     title(sprintf('Basis %i',i));
     
 end
@@ -53,10 +52,19 @@ end
 %% ADMM solution
 
 [Xadmm, hist]  = spectralEstADMM( measImg, cameraMat, basisFcns, alpha, beta, gamma,...
+    'tol',0,...
     'rescaleRho',true,...
     'maxIter',1000,...
     'verbose',true,...
     'reference',Xcvx);
+
+% Reflectance estimates
+reflAdmm = basisFcns*reshape(Xadmm,h*w,nBasis)';
+figure;
+hold on; grid on; box on;
+plot(reflAdmm);
+xlabel('Wavelength, au');
+title('Reflectance estimates ADMM');
 
 % Convergence
 figure; 

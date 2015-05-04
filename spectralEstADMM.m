@@ -1,5 +1,73 @@
 function [ X, hist ] = spectralEstADMM( meas, cameraMat, basisFcns, alpha, beta, gamma, varargin )
 
+% [ X, hist ] = spectralEstADMM( meas, cameraMat, basisFcns, alpha, beta, gamma, ... )
+%
+% This function computes the reflectance basis function weights that best
+% explain the data in meas using the ADMM approach. See the following paper
+% for details
+%
+% H. Blasinski, J. Farrell and B. Wandell; 'Iterative algorithm for
+% spectral estimation with spatial smoothing,' ICIP2015, Quebec City.
+%
+%
+% Parameters:
+%  meas - a h x w x c 3D matrix, where the first two dimensions represent
+%      image height and width. The last dimension is the number of imaging
+%      channels
+%
+%  cameraMat - a c x nWaves matrix where each row represents the spectral
+%      responsivity of a given camera channel. It is assumed that the
+%      spectrum is discretized to nWaves bins.
+%
+%  basisFcns - a nWaves x nBasis matrix where each column is a reflectance
+%      basis function discretized to nWaves spectral bins.
+%
+%  alpha - a scalar controling the spectral smoothess of the solution.
+%  
+%  beta - a scalar controlling the spatial smoothness of the solution.
+%
+%  gamma - a scalar controlling whether the solution is bounded to the
+%     [0,1] interval. If gamma is equal to zero this constraint is NOT
+%     enforced. If gamma is different from zero then the constraint IS
+%     enfoced and the value of the parameter does not matter.
+%
+%
+% Optional Parameters (parameter - value pairs):
+%
+%  'maxIter' - a scalar defining the maximal number of ADMM iterations
+%     (default = 100).
+%
+%  'tol' - a scalar defining the desired tolerance, which once reached
+%     terminated the main ADMM loop (default = 1e-3).
+%
+%  'rhoInit' - the initial value of the proximal term weight rho (see paper
+%     for details, default = 0.1);
+%
+%  'rescaleRho' - a boolean value enableing or disabling dynamic rho update
+%     heuristic (default = true).
+%
+%  'mu','tauIncr','tauDecr' - scalars controling the dynamic rho update
+%     heuristic, see Boyd 2011 for details (default, mu = 10, tauIncr =
+%     tauDect = 5);
+%
+%  'verbose' - a boolean value turning on/off ADMM convergence summary at
+%     every iteration (default = true).
+%
+%  'reference' - a reference solution computed using other means. If this
+%     argument is present, then the hist output will contain a convergence
+%     to reference plot. This input is useful for algorithmic analysis
+%     purposes (default = []).
+%  
+%
+% Returns:
+%  X - a h x w x nBasis matrix of estimated spectral reflectance weights.
+%  
+%  hist - a structure containing the state of the ADMM solver at every
+%     iteration. History contains for example primal and dual residuals,
+%     number of conjugate gradient iterations, values of parameter rho etc.
+%
+%
+% Copyright, Henryk Blasinski 2015.
 
 p = inputParser;
 p.addParamValue('maxIter',100,@isscalar);
@@ -10,7 +78,6 @@ p.addParamValue('tauDecr',5,@isscalar);
 p.addParamValue('rhoInit',0.1,@isscalar);
 p.addParamValue('rescaleRho',true,@islogical);
 p.addParamValue('reference',[]);
-p.addParamValue('tolConv',0,@isscalar);
 p.addParamValue('verbose',false);
 p.parse(varargin{:});
 inputs = p.Results;
@@ -60,20 +127,18 @@ for i=1:inputs.maxIter
 
     
     
-    % Z1 update (spatial smoothness)
-    
-    tmpX = imfilter(msImg,[1 -1 0]);
-    tmpY = imfilter(msImg,[1 -1 0]');
-    
-    
-    dX = [reshape(tmpX(:,2:w,:),h*(w-1),nBasis)' reshape(tmpY(2:h,:,:),(h-1)*w,nBasis)'];
     
     % Anisotropic TV: Soft thresholding on Z1
-    tmp = U1 + dX;
     if beta ~= 0
+        tmpX = imfilter(msImg,[1 -1 0]);
+        tmpY = imfilter(msImg,[1 -1 0]');
+        dX = [reshape(tmpX(:,2:w,:),h*(w-1),nBasis)' reshape(tmpY(2:h,:,:),(h-1)*w,nBasis)'];
+        
+        tmp = U1 + dX;
+
         Z1 = sign(tmp).*max(abs(tmp) - beta/hist.rho(i),0);
     else
-        Z1 = tmp;
+        Z1 = zeros(size(Z1));
     end
     
     % Box constraint: Projection on Z2
@@ -87,7 +152,11 @@ for i=1:inputs.maxIter
     
     
     % Scaled dual variable update
-    res1 = dX - Z1;
+    if beta ~= 0
+        res1 = dX - Z1;
+    else
+        res1 = zeros(size(Z1));
+    end
     res2 = bFX - Z2;
     U1 = U1 + res1;
     U2 = U2 + res2;
@@ -116,11 +185,10 @@ for i=1:inputs.maxIter
     end;
     
     if isempty(inputs.reference) == false
-        hist.conv(i) = norm(X(:) - inputs.reference(:));
+        hist.conv(i) = norm(msImg(:) - inputs.reference(:));
         if inputs.verbose == true
-            fprintf('     -> True error %f (%f)\n',hist.conv(i),inputs.tolConv);
+            fprintf('     -> True error %f\n',hist.conv(i));
         end
-        if hist.conv(i) < inputs.tolConv, break; end;
     end
     
     % Now we need to re-scale the scaled dual variable U as well as the
@@ -148,6 +216,7 @@ X = reshape(X',[h w nBasis]);
 
 end
 
+%% Helper functions called by the least-squares conjugate gradient solver.
 
 function res = applyAt( meas, spatialSmooth, nonnegativity, h, w, cameraMat, basisFcns, beta, gamma, rho)
 
