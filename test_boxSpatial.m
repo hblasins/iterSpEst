@@ -1,3 +1,7 @@
+% Comparison of the CVX and ADMM Box Spatial solver accuracy
+%
+% Copyright, Henryk Blasinski, 2015
+
 close all;
 clear variables;
 clc;

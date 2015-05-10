@@ -1,39 +1,52 @@
+% This is a demo script that runs the spectral estimatino algorithm on an
+% image of a Macbeth chart fragment.
+%
+% Copyright, Henryk Blasinski, 2015
+
 close all;
 clear all;
 clc;
 
 % Choose the number of basis functions
 nBasis = 6;
-
-
-%% Load data
-
-% Wavelength sampling vector.
-load('./Data/wave.mat');
-% Camera matrix which represents the joint effects of the camera quantum
-% efficiency and the external illumination.
-load('./Data/camera.mat');
-% Macbeth reflectance basis functions.
-load('./Data/reflBasis.mat');
-% Sample image data corrected for camera offset (dark voltage) and
-% non-uniform illumination. Pixel values are therefore linear functions of
-% the reflectance (which we are estimating).
-load('./Data/sampleImage.mat');
-
-reflBasis = reflBasis(:,1:nBasis);
+averageError = 0.001;
+wave = 380:5:950; wave = wave(:);
 
 deltaL = wave(2) - wave(1);
 nWaves = length(wave);
 
-camera = camera*deltaL;
+
+% The camera is the product of the quantum efficiency and the illuminant
+fName = fullfile(iterSpEstRoot,'Parameters','sensorQe');
+sensorQe = readSpectralQuantity(fName,wave);
+
+fName = fullfile(iterSpEstRoot,'Parameters','illuminant');
+illuminantEnergy = readSpectralQuantity(fName,wave);
+illuminantQuanta = energy2Quanta(illuminantEnergy,wave);
+
+camera = illuminantQuanta'*diag(sensorQe)*deltaL;
+
+% Reflectance basis functions
+fName = fullfile(iterSpEstRoot,'Parameters','reflBasis');
+reflBasis = readSpectralQuantity(fName,wave);
+reflBasis = reflBasis(:,1:nBasis);
+
+fName = fullfile(iterSpEstRoot,'Data','sampleImage.mat');
+load(fName);
+h = size(Img,1);
+w = size(Img,2);
+nChannels = size(Img,3);
+
+Img = max(Img - repmat(shiftdim(cameraOffset',-2),[h w 1 1]),0);
+cameraMat = diag(cameraGain)*camera;
+
+
 
 figure;
 imshow(Img(:,:,5),[]);
 title('Sample image channel');
 
-h = size(Img,1);
-w = size(Img,2);
-nChannels = size(Img,3);
+
 
 
 %% Solve spectral smoothness constraint only
@@ -47,7 +60,7 @@ Rlambda = [eye(nWaves-1) zeros(nWaves-1,1)] - [zeros(nWaves-1,1) eye(nWaves-1)];
 measVals = reshape(Img,h*w,nChannels)';
 
 mhat = [measVals; zeros(nWaves-1,size(measVals,2))];
-Aalpha = [camera*reflBasis; sqrt(alpha)*Rlambda*reflBasis];
+Aalpha = [cameraMat*reflBasis; sqrt(alpha)*Rlambda*reflBasis];
 Xls = Aalpha\mhat;
 Xls = reshape(Xls',[h w nBasis]);
 tls = toc;
@@ -60,7 +73,7 @@ beta = 0;
 gamma = 1;
 
 tstart = tic;
-[ XBoxAdmm, histBox ] = spectralEstADMM( Img, camera, reflBasis, alpha, beta, gamma,...
+[ XBoxAdmm, histBox ] = spectralEstADMM( Img, cameraMat, reflBasis, alpha, beta, gamma,...
     'maxIter',50,...
     'verbose',true);
 tBoxADMM = toc(tstart);
@@ -71,7 +84,7 @@ beta = 0.1;
 gamma = 0;
 
 tstart = tic;
-[ XSpatialAdmm, histSpatial ] = spectralEstADMM( Img, camera, reflBasis, alpha, beta, gamma,...
+[ XSpatialAdmm, histSpatial ] = spectralEstADMM( Img, cameraMat, reflBasis, alpha, beta, gamma,...
     'maxIter',50,...
     'verbose',true);
 tSpatialADMM = toc(tstart);
@@ -82,7 +95,7 @@ beta = 0.1;
 gamma = 1;
 
 tstart = tic;
-[ XBoxSpatialAdmm, histBoxSpatial ] = spectralEstADMM( Img, camera, reflBasis, alpha, beta, gamma,...
+[ XBoxSpatialAdmm, histBoxSpatial ] = spectralEstADMM( Img, cameraMat, reflBasis, alpha, beta, gamma,...
     'maxIter',50,...
     'verbose',true);
 tBoxSpatialADMM = toc(tstart);
@@ -93,7 +106,11 @@ fprintf('Spectrally smooth + box (ADMM):               %f sec\n',tBoxADMM);
 fprintf('Spectrally and spatially smooth (ADMM):       %f sec\n',tSpatialADMM);
 fprintf('Spectrally and spatially smooth + Box (ADMM): %f sec\n',tBoxSpatialADMM);
 
-if ~exist('./Results','dir');
-    mkdir('./Results');
+
+dName = fullfile(iterSpEstRoot,'Results');
+if ~exist(dName,'dir');
+    mkdir(dName);
 end
-save('./Results/sampleResults.mat','XBoxAdmm','histBox','XSpatialAdmm','histSpatial','XBoxSpatialAdmm','histBoxSpatial','Xls');
+
+fName = fullfile(iterSpEstRoot,'Results','sampleResults.mat');
+save(fName,'XBoxAdmm','histBox','XSpatialAdmm','histSpatial','XBoxSpatialAdmm','histBoxSpatial','Xls');

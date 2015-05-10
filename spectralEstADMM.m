@@ -57,7 +57,13 @@ function [ X, hist ] = spectralEstADMM( meas, cameraMat, basisFcns, alpha, beta,
 %     argument is present, then the hist output will contain a convergence
 %     to reference plot. This input is useful for algorithmic analysis
 %     purposes (default = []).
-%  
+%
+%  'tolConv' - the tolerance for the convergence of the solution to the
+%     provided reference (default = 0).
+%
+%  'gradient' - selects between isotropic and anisotropic graidents,
+%     allowable values: 'isotropic','anisotropic' (default = 'anisotropic').
+%
 %
 % Returns:
 %  X - a h x w x nBasis matrix of estimated spectral reflectance weights.
@@ -78,7 +84,9 @@ p.addParamValue('tauDecr',5,@isscalar);
 p.addParamValue('rhoInit',0.1,@isscalar);
 p.addParamValue('rescaleRho',true,@islogical);
 p.addParamValue('reference',[]);
+p.addParamValue('tolConv',0);
 p.addParamValue('verbose',false);
+p.addParamValue('gradient','anisotropic');
 p.parse(varargin{:});
 inputs = p.Results;
 
@@ -130,13 +138,36 @@ for i=1:inputs.maxIter
     
     % Anisotropic TV: Soft thresholding on Z1
     if beta ~= 0
-        tmpX = imfilter(msImg,[1 -1 0]);
-        tmpY = imfilter(msImg,[1 -1 0]');
-        dX = [reshape(tmpX(:,2:w,:),h*(w-1),nBasis)' reshape(tmpY(2:h,:,:),(h-1)*w,nBasis)'];
         
+        [grX, grY] = computeGradient(msImg);
+        dX = [reshape(grX,h*(w-1),nBasis)' reshape(grY,(h-1)*w,nBasis)'];
         tmp = U1 + dX;
+        
+        switch inputs.gradient
+            case 'isotropic'
+                
+                Vx = [zeros(h,1,nBasis) reshape(tmp(:,1:h*(w-1))',[h,w-1,nBasis])];
+                Vy = [zeros(1,w,nBasis); reshape(tmp(:,h*(w-1)+1:end)',[h-1,w,nBasis])];
+    
+                normV = sqrt(Vx.^2 + Vy.^2);
+                nu = beta./(hist.rho(i)*normV - beta);
+                cond = normV > beta/hist.rho(i);
+    
+                Z1x = zeros(h,w,nBasis); 
+                Z1y = zeros(h,w,nBasis);
+                Z1x(cond) = 1./(1+nu(cond)) .* Vx(cond);
+                Z1y(cond) = 1./(1+nu(cond)) .* Vy(cond);
+                
+                Z1x = Z1x(:,2:end,:);
+                Z1y = Z1y(2:end,:,:);
+                
+                Z1 = [reshape(Z1x,h*(w-1),nBasis)' reshape(Z1y,(h-1)*w,nBasis)'];
+                
+            otherwise % 'anisotropic'
 
-        Z1 = sign(tmp).*max(abs(tmp) - beta/hist.rho(i),0);
+                Z1 = sign(tmp).*max(abs(tmp) - beta/hist.rho(i),0);
+        end
+            
     else
         Z1 = zeros(size(Z1));
     end
@@ -189,6 +220,8 @@ for i=1:inputs.maxIter
         if inputs.verbose == true
             fprintf('     -> True error %f\n',hist.conv(i));
         end
+        
+        if hist.conv(i) < inputs.tolConv, break; end;
     end
     
     % Now we need to re-scale the scaled dual variable U as well as the
@@ -319,6 +352,16 @@ res = res(:);
 
 end
 
+function [grX, grY] = computeGradient( in )
 
+    % Derivatives in the x direction
+    grX = imfilter(in,[1 -1 0]);
+    grX = grX(:,2:end,:);
+
+    % derivatives in the y direction
+    grY = imfilter(in,[1 -1 0]');
+    grY = grY(2:end,:,:);
+
+end
 
 

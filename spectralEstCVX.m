@@ -1,4 +1,4 @@
-function [ X ] = spectralEstCVX( meas, cameraMat, basisFcns, alpha, beta, gamma )
+function [ X ] = spectralEstCVX( meas, cameraMat, basisFcns, alpha, beta, gamma, varargin )
 
 % [ X ] = spectralEstCVX( meas, cameraMat, basisFcns, alpha, beta, gamma )
 %
@@ -35,12 +35,21 @@ function [ X ] = spectralEstCVX( meas, cameraMat, basisFcns, alpha, beta, gamma 
 %     enfoced and the value of the parameter does not matter.
 %  
 %
+% Optional Parameters (parameter - value pairs):
+%  'gradient' - selects between isotropic and anisotropic graidents,
+%     allowable values: 'isotropic','anisotropic' (default = 'anisotropic').
+%
+%
 % Returns:
 %  X - a h x w x nBasis matrix of estimated spectral reflectance weights.
 %  
 %
 % Copyright, Henryk Blasinski 2015.
 
+p = inputParser;
+p.addParamValue('gradient','anisotropic');
+p.parse(varargin{:});
+inputs = p.Results;
 
 nWaves = size(basisFcns,1);
 nBasis = size(basisFcns,2);
@@ -78,7 +87,16 @@ end
 cvx_begin
     variable X(nBasis,h*w)
     if beta ~= 0
-        minimize sum(sum_square(meas - cameraMat*basisFcns*X)) + alpha*sum(sum_square(Rlambda*basisFcns*X)) + beta*sum(sum(abs(RX*(X)'))) + beta*sum(sum(abs(RY*(X)')))
+        switch inputs.gradient
+            case 'isotropic'
+                dX = RX*X';
+                dX = [zeros(h,1,nBasis) reshape(dX,[h,w-1,nBasis])];
+                dY = RY*X';
+                dY = [zeros(1,w,nBasis); reshape(dY,[h-1,w,nBasis])];
+                minimize sum(sum_square(meas - cameraMat*basisFcns*X)) + alpha*sum(sum_square(Rlambda*basisFcns*X)) + beta*sum(sum(sum(norms(cat(4,dX,dY),2,4))))
+            otherwise
+                minimize sum(sum_square(meas - cameraMat*basisFcns*X)) + alpha*sum(sum_square(Rlambda*basisFcns*X)) + beta*sum(sum(abs(RX*(X)'))) + beta*sum(sum(abs(RY*(X)')))
+        end
     else
         minimize sum(sum_square(meas - cameraMat*basisFcns*X)) + alpha*sum(sum_square(Rlambda*basisFcns*X))   
     end
