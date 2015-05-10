@@ -56,14 +56,18 @@ RMSEBoxSpatial = zeros(nPoints,1);
 SNR = zeros(nPoints,1);
 
 Images = cell(nPoints,1);
+cameraMats = cell(nPoints,1);
 for i=1:nPoints
     fName = fullfile(iterSpEstRoot,'Data',sprintf('noisyScene_%i',i));
     load(fName);
     
-    Images{i} = Img;
-    
     h = size(Img,1);
     w = size(Img,2);
+    
+    Img = max(Img - repmat(shiftdim(cameraOffset,-2),[h w 1]),0);
+    
+    Images{i} = Img;
+    cameraMats{i} = diag(cameraGain)*camera;
     SNR(i) = snr;
 end
 
@@ -71,9 +75,7 @@ matlabpool open local
 parfor i=1:nPoints
 
     Img = Images{i};
-    
-    Img = max(Img - repmat(shiftdim(cameraOffset,-2),[h w 1]),0);
-    cameraMat = diag(cameraGain)*camera;
+    cameraMat = cameraMats{i};
     
 
     % Least-squares
