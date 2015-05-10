@@ -10,7 +10,7 @@ close all;
 clear all;
 clc;
 
-fName = fullfile(iterSpEstRoot,'Results','noisyMacbeth.mat');
+fName = fullfile(iterSpEstRoot,'Results','noisyMacbethV2.mat');
 if ~exist(fName,'file');
     sName = fullfile(iterSpEstRoot,'s_analyzeNoisyMacbeth.m');
     run(sName);

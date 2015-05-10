@@ -20,7 +20,7 @@ title('Camera pixel intensities');
 
 
 RMSEls = sqrt(sum((reflEstImg - reference).^2,3));
-figure; imagesc(RMSEls); colorbar;
+figure; imagesc(RMSEls,[0 2]); colorbar;
 title('Per pixel squared error (SE)');
 
 

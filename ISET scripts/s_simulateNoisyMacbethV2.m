@@ -99,6 +99,7 @@ for lightMult = logspace(0,-2,nPoints);
         scaleFac = max(image(:));
         image = image/scaleFac;
         cameraGain(ch) = cameraGain(ch)/scaleFac;
+        cameraOffset(ch) = cameraOffset(ch)/scaleFac;
         
         Img = cat(3,Img,image);
     
