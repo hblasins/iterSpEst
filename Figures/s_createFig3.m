@@ -10,9 +10,9 @@ close all;
 clear all;
 clc;
 
-fName = fullfile(iterSpEstRoot,'Results','noisyMacbeth.mat');
+fName = fullfile(iterSpEstRoot,'Results','noisyReadMacbeth.mat');
 if ~exist(fName,'file');
-    sName = fullfile(iterSpEstRoot,'s_analyzeNoisyMacbeth.m');
+    sName = fullfile(iterSpEstRoot,'s_analyzeNoisyReadMacbeth.m');
     run(sName);
 else
     load(fName);
@@ -50,5 +50,5 @@ sz = 0.5*sz;
 sz(4) = 0.5*sz(4);
 set(gcf,'PaperPosition',sz);
 plotTickLatex2D('yLabelDx',-0.02,'xLabelDy',0.01,'fontsize',fs-2);
-fName = fullfile(iterSpEstRoot,'Figures','noisyMacbeth.eps');
+fName = fullfile(iterSpEstRoot,'Figures','noisyLightMacbeth.eps');
 print('-depsc',fName);
