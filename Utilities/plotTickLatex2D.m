@@ -173,7 +173,7 @@ if ~isempty(xTickLabel)
                     % Determine where there should be an exponent
                     xExp = max(abs(xLimit));
                     if xExp > 0
-                        xExpLog = ceil(log10(xExp));
+                        xExpLog = ceil(log10(xExp)) - 1;
                         if(xExpLog > 0)
                             xExpLog = xExpLog - 1;
                         end

@@ -26,29 +26,25 @@ img = (img/max(img(:))).^(1/2.2);
 
 %%
 
-lw = 1;
-fs = 6;
-ms = 3;
+lw = 5;
+fs = 20;
+ms = 10;
 f1 = figure;
 hold on; grid on; box on;
 plot(SNR,RMSELs,'g^-','lineWidth',lw,'markersize',ms);
 plot(SNR,RMSEBox,'rd-','lineWidth',lw,'markersize',ms);
-plot(SNR,RMSESpatial,'bs-','lineWidth',lw,'markersize',ms);
+plot(SNR,RMSESpatial,'bs-','lineWidth',lw,'markersize',2*ms);
 plot(SNR,RMSEBoxSpatial,'co-','lineWidth',lw,'markersize',ms);
-xlabel('SNR, dB','fontsize',fs,'interpreter','latex');
-ylabel('RMSE','fontsize',fs,'interpreter','latex');
+xlabel('Measurement SNR, dB','fontsize',fs,'interpreter','latex');
+ylabel('Reflectance RMSE','fontsize',fs,'interpreter','latex');
 ylim([0.4 1.4]);
 set(gca,'XTick',12:2:36);
 set(gca,'YTick',0.4:0.2:1.2);
-
-sz = get(gcf,'Paperposition');
-sz = 0.5*sz;
-sz(4) = 0.5*sz(4);
-set(gcf,'PaperPosition',sz);
+set(gcf,'PaperUnits','centimeters','PaperPosition',[1 1 24 15]);
 plotTickLatex2D('yLabelDx',-0.02,'xLabelDy',0.01,'fontsize',fs-2);
 
 % Add the image
-ax = axes('Position',[0.5 0.4 0.5 0.5]);
+ax = axes('Position',[0.5 0.5 0.4 0.4]);
 imagesc(img);
 set(gca,'XTickLabel',[]);
 set(gca,'YTickLabel',[]);
@@ -57,5 +53,5 @@ set(gca,'YTick',[]);
 axis image;
 
 
-fName = fullfile(iterSpEstRoot,'Figures','noisyLightScene.eps');
-% print('-depsc',fName);
+fName = fullfile('~','Dropbox','MsVideo','Notes','ICIP15','Figures','noisyLightScenePoster.eps');
+print('-depsc',fName);
